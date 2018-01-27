@@ -277,6 +277,8 @@ function game.drawGame()
     for _, entity in ipairs(toDraw) do
         if state.currentlySelectedEntity == entity then
             love.graphics.setColor(100, 100, 255)
+        elseif entity.power and entity.power > 0 then
+            love.graphics.setColor(255, 255, 100)
         elseif game.hasUnsatisfiedRequirement(entity) then
             love.graphics.setColor(255, 0, 0)
         else

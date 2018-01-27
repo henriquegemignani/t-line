@@ -7,8 +7,8 @@ local entities = {
     },
     {
         drawable = "factory",
-        x = 300,
-        y = 150,
+        x = 350,
+        y = 120,
         power = -2.5,
         money = 50,
         people = -7,
@@ -22,14 +22,14 @@ local entities = {
     },
     {
         drawable = "house",
-        x = 450,
+        x = 400,
         y = 230,
         power = -.6,
         people = 6,
     },
     {
         drawable = "nuclear_plant",
-        x = 1200,
+        x = 1100,
         y = 500,
         power = 6,
         money = -20,
