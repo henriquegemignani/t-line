@@ -86,11 +86,18 @@ function game.calculateProfit()
         end
     end
 
+    for _, group in ipairs(state.entityGroups) do
+        if group.money and group.money > 0 then
+            profit = profit + group.money
+        end
+    end
+
     return profit
 end
 
 function game.calculateReach()
     state.groupForEntity = {}
+    state.entityGroups = {}
 
     local mapEntities = state.mapEntities
     local groupForEntity = state.groupForEntity
@@ -99,7 +106,9 @@ function game.calculateReach()
     local nextGroup = 0
     local function genGroup()
         nextGroup = nextGroup + 1
-        return { name = tostring(nextGroup), }
+        local group = { name = tostring(nextGroup), }
+        table.insert(state.entityGroups, group)
+        return group
     end
 
     for _, initialEntity in ipairs(mapEntities) do
@@ -206,8 +215,8 @@ function game.addConnectionBetween(entityA, entityB)
     state.connections[entityA][entityB] = newState
     state.connections[entityB][entityA] = newState
     game.calculateReach()
+    state.currentMoney = game.calculateProfit()
 
-    state.currentMoney = state.currentMoney - price
     return price
 end
 
@@ -226,8 +235,7 @@ function game.removeConnectionBetween(entityA, entityB)
     state.connections[entityA][entityB] = newState
     state.connections[entityB][entityA] = newState
     game.calculateReach()
-
-    state.currentMoney = state.currentMoney - price
+    state.currentMoney = game.calculateProfit()
     return price
 end
 

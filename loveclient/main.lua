@@ -291,11 +291,11 @@ function love.mousereleased(x, y, mouseButton)
                     if price > 0 then
                         spawnTextEffect(string.format("%-.2f $", price), x, y, {255, 0, 0})
                     end
-                    state.currentlySelectedEntity = nil
                     break
                 end
             end
         end
+        state.currentlySelectedEntity = nil
     end
 end
 
