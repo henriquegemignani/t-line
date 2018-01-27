@@ -3,6 +3,8 @@ local constants = require("constants")
 local state = require("state")
 local images = require("images")
 
+local game = {}
+
 --[[
  * Converts an HSV color value to RGB. Conversion formula
  * adapted from http://en.wikipedia.org/wiki/HSV_color_space.
@@ -122,7 +124,7 @@ function love.load()
     images.solar_power = love.graphics.newImage("solar-power.png")
 
     genGlobals()
-    require("multiplayer"):start()
+    -- require("multiplayer"):start()
 end
 
 local function getWaveIntensityAt(waveState, position)
@@ -249,20 +251,6 @@ local function spawnTextEffect(text, x, y, color)
         time = 0,
         duration = 1.5,
         text = text,
-        onComplete = function() end,
-    })
-end
-
-local function spawnOtherPlayerScoreEffect(score)
-    local scoreTransform = math.log(math.abs(score) + 1)
-    table.insert(state.playerScoreEffects, {
-        x = 0.2 + math.random() * 0.6,
-        y = 0.2 + math.random() * (constants.betaWave.y - 0.2),
-        score = score,
-        time = 0,
-        duration = scoreTransform / 2,
-        color = {255, 255, 255, 0},
-        maxAlpha = math.min(1, scoreTransform),
         onComplete = function() end,
     })
 end
@@ -457,11 +445,6 @@ local function drawButton(button)
     else
         label(x, y)
     end
-
-    if state.actionCooldownTimer > 0 then
-        love.graphics.setColor(0, 0, 0, 150)
-        alignedRectangle(x, y, width + border, height + border, 0.5, 0.5)
-    end
 end
 
 local function drawParticle(particle)
@@ -480,22 +463,59 @@ local function drawPlayerScoreEffect(effect)
     alignedRectangle(x, y, 4 * effect.score, 1, 0.5, 0.5)
 end
 
+local function isInsideRect(x, y, lx, rx, ly, ry)
+    return lx <= x and x <= rx
+       and ly <= y and y <= ry
+end
+
 local function isInsideButton(button, x, y)
     local bx = buttonX(button)
     local by = buttonY(button)
     local hWidth = button.width / 2
     local hHeight = button.height / 2
-    return bx - hWidth <= x and x <= bx + hWidth
-       and by - hHeight <= y and y <= by + hHeight
+    return isInsideRect(x, y,
+        bx - hWidth,  bx + hWidth,
+        by - hHeight, by + hHeight
+    )
+    -- return bx - hWidth <= x and x <= bx + hWidth
+    --    and by - hHeight <= y and y <= by + hHeight
 end
 
-local function drawMapEntity(entity)
-    love.graphics.push()
-    love.graphics.translate(entity.x, entity.y)
-    
+function game.isInsideEntity(entity, mouseX, mouseY)
+    local imageScale = constants.imageScale
     local drawable = images[entity.drawable]
     local width, height = drawable:getDimensions()
-    local imageScale = 1/12
+
+    return isInsideRect(
+        mouseX - state.cameraPositionX, mouseY - state.cameraPositionY,
+        entity.x - width * imageScale, entity.x,
+        entity.y + height * imageScale * -1/2, entity.y + height * imageScale * 1/2
+    )
+end
+
+function game.entityImageCenter(entity)
+    local imageScale = constants.imageScale
+    local drawable = images[entity.drawable]
+    local width = drawable:getWidth()
+
+    return
+        entity.x + width * imageScale * -1/2,
+        entity.y
+end
+
+function game.priceBetweenPoints(sourceX, sourceY, targetX, targetY)
+    local distance = math.abs(sourceX - targetX)
+                        + math.abs(sourceY - targetY)
+    return distance / 50
+end
+
+function game.drawMapEntity(entity)
+    love.graphics.push()
+    love.graphics.translate(entity.x, entity.y)
+
+    local drawable = images[entity.drawable]
+    local width, height = drawable:getDimensions()
+    local imageScale = constants.imageScale
 
     local texts = {}
     for _, statName in ipairs(constants.possibleStatsOrder) do
@@ -513,12 +533,63 @@ local function drawMapEntity(entity)
     love.graphics.pop()
 end
 
-local function drawGame()
+function game.isConnectedWith(entityA, entityB)
+    return (state.connections[entityA] and state.connections[entityA][entityB])
+           or (state.connections[entityB] and state.connections[entityB][entityA])
+end
+
+function game.addConnectionBetween(entityA, entityB)
+    state.connections[entityA] = state.connections[entityA] or {}
+    state.connections[entityA][entityB] = true
+
+    local entityX, entityY = game.entityImageCenter(entityA)
+    local price = game.priceBetweenPoints(entityX, entityY, game.entityImageCenter(entityB))
+    state.currentMoney = state.currentMoney - price
+
+    return price
+end
+
+function game.drawGame()
     love.graphics.push()
     love.graphics.translate(state.cameraPositionX, state.cameraPositionY)
 
-    for _, entity in ipairs(state.mapEntities) do
-        drawMapEntity(entity)
+    local mapEntities = state.mapEntities
+
+    love.graphics.setColor(255, 255, 255, 256/4)
+    for originEntity, targetEntities in pairs(state.connections) do
+        for targetEntity in pairs(targetEntities) do
+            local entityX, entityY = game.entityImageCenter(originEntity)
+            love.graphics.line(entityX, entityY, game.entityImageCenter(targetEntity))
+        end
+    end
+    love.graphics.setColor(255, 255, 255, 255)
+
+    local toDraw = {}
+    for i, entity in ipairs(mapEntities) do
+        toDraw[i] = entity
+    end
+    table.sort(toDraw, function(entityA, entityB) return entityA.y < entityB.y end)
+
+    for _, entity in ipairs(toDraw) do
+        if state.currentlySelectedEntity == entity then
+            love.graphics.setColor(0, 0, 255)
+        else
+            love.graphics.setColor(255, 255, 255)
+        end
+        game.drawMapEntity(entity)
+    end
+
+    if state.currentlySelectedEntity then
+        love.graphics.setColor(0, 0, 255)
+        local mouseX, mouseY = love.mouse.getPosition()
+        mouseX = mouseX - state.cameraPositionX
+        mouseY = mouseY - state.cameraPositionY
+
+        local entityX, entityY = game.entityImageCenter(state.currentlySelectedEntity)
+        love.graphics.line(entityX, entityY, mouseX, mouseY)
+
+        alignedPrint(string.format("-%d $", game.priceBetweenPoints(mouseX, mouseY, entityX, entityY)),
+                     mouseX + 10, mouseY + 10, 0, 0)
     end
 
     love.graphics.pop()
@@ -527,7 +598,8 @@ end
 local function drawHud()
     -- Score
     love.graphics.setColor(255, 255, 255, 255)
-    alignedPrint(string.format("Demand: %d MW -- Supply: %d MW -- Money: $1500", state.playerScore, 0),
+    alignedPrint(string.format("Demand: %d MW -- Supply: %d MW -- Money: %d $",
+                               state.playerScore, 0, state.currentMoney),
                  centerX, 5, 0.5, 0.0,
                  bigFont)
 
@@ -567,11 +639,17 @@ end
 function love.draw()
     love.graphics.reset()
     love.graphics.setColor(255, 255, 255)
-    drawGame()
+    game.drawGame()
     drawHud()
 end
 
 function love.mousemoved(x, y)
+    if state.mouseDown and not state.clickedAButton then
+        state.cameraPositionX = state.cameraPositionX + (x - state.lastMouseX)
+        state.cameraPositionY = state.cameraPositionY + (y - state.lastMouseY)
+        state.lastMouseX = x
+        state.lastMouseY = y
+    end
     for _, button in pairs(buttons) do
         local isInside = isInsideButton(button, x, y)
         if state.mouseDown then
@@ -586,12 +664,27 @@ end
 function love.mousepressed(x, y, mouseButton)
     if mouseButton == 1 then
         state.mouseDown = true
+        state.lastMouseX = x
+        state.lastMouseY = y
+
+        local clickedAButton = false
         for _, button in pairs(buttons) do
-            if state.actionCooldownTimer <= 0 and isInsideButton(button, x, y) then
+            if isInsideButton(button, x, y) then
                 button.pressing = true
+                clickedAButton = true
                 break
             end
         end
+        if not state.currentlySelectedEntity then
+            for _, entity in ipairs(state.mapEntities) do
+                if game.isInsideEntity(entity, x, y) then
+                    state.currentlySelectedEntity = entity
+                    clickedAButton = true
+                    break
+                end
+            end
+        end
+        state.clickedAButton = clickedAButton
     end
 end
 
@@ -604,6 +697,22 @@ function love.mousereleased(x, y, mouseButton)
                 button.onRelease()
             end
             button.pressing = false
+        end
+        if state.currentlySelectedEntity then
+            for _, entity in ipairs(state.mapEntities) do
+                if game.isInsideEntity(entity, x, y) then
+                    if entity == state.currentlySelectedEntity then
+                        state.currentlySelectedEntity = nil
+                        break
+                    end
+                    if not game.isConnectedWith(state.currentlySelectedEntity, entity) then
+                        local price = game.addConnectionBetween(state.currentlySelectedEntity, entity)
+                        spawnTextEffect(string.format("%-.2f $", price), x, y, {255, 0, 0})
+                    end
+                    state.currentlySelectedEntity = nil
+                    break
+                end
+            end
         end
     end
 end

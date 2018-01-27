@@ -8,6 +8,7 @@ return {
         power = "%+.2f MW",
         money = "%+.2f $/s",
     },
+    imageScale = 1/12,
 
     playerWaveInterval = 10,
     playerWaveDuration = 20,

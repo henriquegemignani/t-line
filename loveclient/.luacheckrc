@@ -8,5 +8,5 @@ globals = {
     "centerY",
     "font",
     "smallFont",
-    "bigFont,
+    "bigFont",
 }

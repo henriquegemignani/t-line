@@ -5,20 +5,39 @@ return {
     mapEntities = {
         {
             drawable = "solar_power",
-            text = "+1MW",
             x = 150,
-            y = 100,
+            y = 400,
             power = 1,
         },
         {
             drawable = "factory",
-            text = "-2.5MW\n+$5",
             x = 400,
-            y = 250,
+            y = 150,
             power = -2.5,
             money = 5,
         },
+        {
+            drawable = "house",
+            x = 580,
+            y = 120,
+            power = -.5,
+        },
+        {
+            drawable = "house",
+            x = 480,
+            y = 220,
+            power = -.6,
+        },
+        {
+            drawable = "nuclear_plant",
+            x = 1200,
+            y = 500,
+            power = 8,
+        },
     },
+    connections = {
+    },
+    currentMoney = 0,
 
 
     playerScore = 0,
