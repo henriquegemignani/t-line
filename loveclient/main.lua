@@ -1,6 +1,7 @@
 
 local constants = require("constants")
 local state = require("state")
+local images = require("images")
 
 --[[
  * Converts an HSV color value to RGB. Conversion formula
@@ -47,8 +48,9 @@ end
 
 local function alignedPrint(msg, x, y, anchorX, anchorY, theFont)
     theFont = theFont or font
+    local numLines = select(2, msg:gsub("\n", ""))
     local w = theFont:getWidth(msg)
-    local h = theFont:getHeight(msg)
+    local h = theFont:getHeight() * (numLines + 1)
     love.graphics.setFont(theFont)
     love.graphics.print(msg, x - w * anchorX, y - h * anchorY)
 end
@@ -70,7 +72,7 @@ local function drawPulse(intensity, letter, x, y)
             1,
             1)
     end
-    alignedPrint(letter, x, y + 10, 0.5, 0.5, _G.smallFont)
+    alignedPrint(letter, x, y + 10, 0.5, 0.5, smallFont)
 end
 
 local function createDrawPulse(intensity, letter)
@@ -110,9 +112,15 @@ function love.load()
             return true
         end
     end
-    _G.smallFont = love.graphics.newFont("DejaVuSansMono.ttf", 15)
-    _G.bigFont = love.graphics.newFont("DejaVuSansMono.ttf", 25)
+    smallFont = love.graphics.newFont("DejaVuSansMono.ttf", 15)
+    bigFont = love.graphics.newFont("DejaVuSansMono.ttf", 25)
     font = love.graphics.setNewFont("DejaVuSansMono.ttf", 20)
+    images.cash = love.graphics.newImage("cash.png")
+    images.factory = love.graphics.newImage("factory.png")
+    images.house = love.graphics.newImage("house.png")
+    images.nuclear_plant = love.graphics.newImage("nuclear-plant.png")
+    images.solar_power = love.graphics.newImage("solar-power.png")
+
     genGlobals()
     require("multiplayer"):start()
 end
@@ -481,50 +489,64 @@ local function isInsideButton(button, x, y)
        and by - hHeight <= y and y <= by + hHeight
 end
 
-function love.draw()
-    -- Waves
-    renderWave(state.alphaWave, constants.alphaWave)
-    alignedPrint("α", 5, waveY(constants.alphaWave), 0, 1)
-    alignedPrint(string.format("%d%% ψ", state.alphaWave.affinity * 100),
-                 screenWidth - 5, waveY(constants.alphaWave), 1, 1)
-    renderWave(state.betaWave, constants.betaWave)
-    alignedPrint("β", 5, waveY(constants.betaWave), 0, 0)
-    alignedPrint(string.format("%d%% ψ", state.betaWave.affinity * 100),
-                 screenWidth - 5, waveY(constants.betaWave), 1, 0)
+local function drawMapEntity(entity)
+    love.graphics.push()
+    love.graphics.translate(entity.x, entity.y)
+    
+    local drawable = images[entity.drawable]
+    local width, height = drawable:getDimensions()
+    local imageScale = 1/12
 
+    local texts = {}
+    for _, statName in ipairs(constants.possibleStatsOrder) do
+        if entity[statName] then
+            table.insert(texts, string.format(constants.statsFormatting[statName], entity[statName]))
+        end
+    end
+
+    love.graphics.draw(drawable,
+        width * imageScale * -1,
+        height * imageScale * -1/2,
+        0, imageScale, imageScale)
+    alignedPrint(table.concat(texts, "\n"), 5, 0, 0, 0.5, font)
+
+    love.graphics.pop()
+end
+
+local function drawGame()
+    love.graphics.push()
+    love.graphics.translate(state.cameraPositionX, state.cameraPositionY)
+
+    for _, entity in ipairs(state.mapEntities) do
+        drawMapEntity(entity)
+    end
+
+    love.graphics.pop()
+end
+
+local function drawHud()
     -- Score
     love.graphics.setColor(255, 255, 255, 255)
-    alignedPrint(string.format("Score: %d", state.playerScore),
+    alignedPrint(string.format("Demand: %d MW -- Supply: %d MW -- Money: $1500", state.playerScore, 0),
                  centerX, 5, 0.5, 0.0,
-                 _G.bigFont)
+                 bigFont)
 
     -- Action buttons
     for _, button in pairs(buttons) do
         drawButton(button)
     end
 
-    -- Cooldown display
-    local cooldownRemaining = state.actionCooldownTimer / constants.actionCooldown
-    local middleAngle = (1 - cooldownRemaining) * math.pi * 2 - math.pi/2
-    love.graphics.setColor(100, 100, 100,
-        state.actionCooldownTimer > 0 and 255
-        or 100
-    )
-    love.graphics.arc("fill", centerX, screenHeight * 14/16, 30, -math.pi/2, middleAngle)
-    love.graphics.setColor(255, 0, 0, 255)
-    love.graphics.arc("fill", centerX, screenHeight * 14/16, 30, middleAngle, math.pi * 3/2)
-
     -- Player count
     if type(state.currentPlayers) == "boolean" then
         love.graphics.setColor(255, 0, 0, 255)
-        alignedPrint("Offline", 5, screenHeight - 5, 0, 1, _G.smallFont)
+        alignedPrint("Offline", 5, screenHeight - 5, 0, 1, smallFont)
     else
         love.graphics.setColor(255, 255, 0, 255)
         alignedPrint(string.format("Current Players: %d", state.currentPlayers),
-                     5, screenHeight - 5, 0, 1, _G.smallFont)
+                     5, screenHeight - 5, 0, 1, smallFont)
     end
         alignedPrint(string.format("FPS: %d", love.timer.getFPS()),
-                     screenWidth - 5, screenHeight - 5, 1, 1, _G.smallFont)
+                     screenWidth - 5, screenHeight - 5, 1, 1, smallFont)
 
     -- Particles
     for _, particle in ipairs(state.particles) do
@@ -540,6 +562,13 @@ function love.draw()
     for _, effect in ipairs(state.playerScoreEffects) do
         drawPlayerScoreEffect(effect)
     end
+end
+
+function love.draw()
+    love.graphics.reset()
+    love.graphics.setColor(255, 255, 255)
+    drawGame()
+    drawHud()
 end
 
 function love.mousemoved(x, y)

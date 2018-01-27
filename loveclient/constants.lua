@@ -1,5 +1,14 @@
 
 return {
+    possibleStatsOrder = {
+        "power",
+        "money",
+    },
+    statsFormatting = {
+        power = "%+.2f MW",
+        money = "%+.2f $/s",
+    },
+
     playerWaveInterval = 10,
     playerWaveDuration = 20,
     playerWaveRadius = 200,
