@@ -3,6 +3,8 @@ local constants = require("constants")
 local state = require("state")
 local images = require("images")
 
+_G.state = state
+
 local game = {}
 
 --[[
@@ -57,43 +59,8 @@ local function alignedPrint(msg, x, y, anchorX, anchorY, theFont)
     love.graphics.print(msg, x - w * anchorX, y - h * anchorY)
 end
 
-local function drawPulse(intensity, letter, x, y)
-    local lineWidth = 10
-    local pulseWidth = 10
-    for col = -lineWidth * 2, lineWidth * 2 do
-        local pointPos = 0
-
-        local distance = math.abs(col / 2)
-        if distance <= pulseWidth then
-            pointPos = intensity * math.cos( (math.pi / 2) * (distance / pulseWidth) )
-        end
-
-        love.graphics.rectangle("fill",
-            x + col / 2,
-            y - pointPos + intensity / 2 - 8,
-            1,
-            1)
-    end
-    alignedPrint(letter, x, y + 10, 0.5, 0.5, smallFont)
-end
-
-local function createDrawPulse(intensity, letter)
-    return function(...)
-        return drawPulse(intensity, letter, ...)
-    end
-end
-
 local buttons = {}
-local alphaHue = constants.alphaWave.hue
-local betaHue  = constants.betaWave.hue
-buttons.pulse_alpha_plus  = genButton( 2.0/16, createDrawPulse( 10, "α"), alphaHue)
-buttons.pulse_alpha_minus = genButton( 3.5/16, createDrawPulse(-10, "α"), alphaHue)
-buttons.pulse_beta_plus   = genButton( 5.0/16, createDrawPulse( 10, "β"), betaHue)
-buttons.pulse_beta_minus  = genButton( 6.5/16, createDrawPulse(-10, "β"), betaHue)
-buttons.affinity_alpha    = genButton( 9.5/16, "+ψα", alphaHue)
-buttons.velocity_alpha    = genButton(11.0/16, "+vα", alphaHue)
-buttons.affinity_beta     = genButton(12.5/16, "+ψβ", betaHue)
-buttons.velocity_beta     = genButton(14.0/16, "+vβ", betaHue)
+buttons.calculate_reach     = genButton(0.5, "REACH", constants.betaWave.hue)
 
 local function genGlobals()
     screenWidth, screenHeight = love.graphics.getDimensions()
@@ -122,88 +89,10 @@ function love.load()
     images.house = love.graphics.newImage("house.png")
     images.nuclear_plant = love.graphics.newImage("nuclear-plant.png")
     images.solar_power = love.graphics.newImage("solar-power.png")
+    game.calculateReach()
 
     genGlobals()
     -- require("multiplayer"):start()
-end
-
-local function getWaveIntensityAt(waveState, position)
-    local intensity = 0
-    for _, pulse in ipairs(waveState.pulses) do
-        local distance = math.abs(pulse.position - position)
-        if distance < pulse.width then
-            intensity = intensity + pulse.intensity * math.cos( (math.pi / 2) * (distance / pulse.width) )
-        end
-    end
-    return intensity
-end
-
-local function spawnScoreEffect(radius, x, y, color, onComplete)
-    table.insert(state.particles, {
-        fromX = x,
-        fromY = y,
-        toX = x + math.random(-40, 40),
-        toY = 30,
-        color = color,
-        radius = radius,
-        x = x,
-        y = y,
-        midWayX = x + math.random(-100, 100),
-        time = 0,
-        duration = 0.5 + math.random(),
-        onComplete = onComplete,
-    })
-end
-
-local function waveY(waveConfig)
-    return waveConfig.y * screenHeight
-end
-
-local function waveColorAt(waveConfig, position)
-    -- -1 to 1
-    -- -0.25 to 0.25
-    local saturation = 0.75 + math.sin(
-        waveConfig.saturationPulseOffset + position / 2) / 4
-    return hsvToRgb(waveConfig.hue, saturation, 1, 1)
-end
-
-local function updateWave(wave, dt)
-    wave.position = wave.position + wave.velocity * dt
-    wave.affinity = wave.affinity - wave.affinity * 0.05 * dt
-
-    local deltaVelocity = (constants.targetVelocity - wave.velocity)
-    wave.velocity = wave.velocity + deltaVelocity * 0.05 * dt
-
-    if wave.position > 4096 then
-        wave.position = wave.position - 4096
-        for _, pulse in ipairs(wave.pulses) do
-            pulse.position = pulse.position - 4096
-        end
-    end
-
-    local waveRightCorner = wave.position - screenWidth * constants.pixelSize
-    local index = 1
-    while index <= #wave.pulses do
-        if wave.pulses[index].position < waveRightCorner then
-            table.remove(wave.pulses, index)
-        else
-            index = index + 1
-        end
-    end
-
-    -- Give points
-    local points = getWaveIntensityAt(wave, wave.position) * wave.affinity * dt
-
-    if math.abs(points) > 0.1 * dt then
-        spawnScoreEffect(math.log(math.abs(points)),
-            centerX,
-            waveY(constants[wave.name]) + math.random(-8, 8),
-            {waveColorAt(constants[wave.name], wave.position)},
-            function()
-                state.playerScore = state.playerScore + points
-                state.pointsRecently = state.pointsRecently + points
-            end)
-    end
 end
 
 local function updateParticle(particle, dt)
@@ -220,14 +109,6 @@ local function updateParticle(particle, dt)
                        * math.pow(otherPercent - 1, 2) + particle.midWayX
     end
     particle.y = particle.fromY + (particle.toY - particle.fromY) * percent
-end
-
-local function sendPulse(waveState, intensity, width)
-    table.insert(waveState.pulses, {
-        position = waveState.position + 4 * waveState.velocity,
-        intensity = intensity,
-        width = width,
-    })
 end
 
 local function updateTextEffect(textEffect, dt)
@@ -286,50 +167,13 @@ end
 
 function love.update(dt)
     require("lurker").update()
-    updateWave(state.alphaWave, dt)
-    updateWave(state.betaWave, dt)
+    require("lovebird").update()
     updateArray(state.particles, dt, updateParticle)
     updateArray(state.textEffects, dt, updateTextEffect)
     updateArray(state.playerScoreEffects, dt, updatePlayerScoreEffect)
 
     if state.actionCooldownTimer > 0 then
         state.actionCooldownTimer = math.max(state.actionCooldownTimer - dt, 0)
-    end
-
-    state.pointsRecentlyTimer = state.pointsRecentlyTimer + dt
-    if state.pointsRecentlyTimer > constants.pointsRecentlyInterval then
-        if math.abs(state.pointsRecently) > 1 then
-            local outbound = love.thread.getChannel("outbound")
-            outbound:push(string.format("player_points %d", state.pointsRecently))
-        end
-        state.pointsRecently = 0
-        state.pointsRecentlyTimer = 0
-    end
-
-    local inboundChannel = love.thread.getChannel("inbound")
-    local command = inboundChannel:pop()
-    if command then
-        print("received command: '" .. command .. "'")
-        local com, arg1, arg2 = command:match("^([%w_]+) ([%w%-]+) ?([%w%-]*)")
-        print("Parsed:", com, arg1, arg2)
-        if com == "num_players" then
-            state.currentPlayers = arg1
-        elseif com == "pulse_alpha" then
-            sendPulse(state.alphaWave, tonumber(arg1), tonumber(arg2))
-        elseif com == "pulse_beta" then
-            sendPulse(state.betaWave, tonumber(arg1), tonumber(arg2))
-        elseif com == "alpha_velocity" then
-            state.alphaWave.velocity = state.alphaWave.velocity + tonumber(arg1)
-            spawnTextEffect("+v", 40, waveY(constants.alphaWave) - 10,
-                            {hsvToRgb(constants.alphaWave.hue, 1, 1, 1)})
-        elseif com == "beta_velocity" then
-            state.betaWave.velocity = state.betaWave.velocity + tonumber(arg1)
-            spawnTextEffect("+v", 40, waveY(constants.betaWave) - 10,
-                            {hsvToRgb(constants.betaWave.hue, 1, 1, 1)})
-        elseif com == "player_points" then
-            -- Can't think of anything that looks good
-            -- spawnOtherPlayerScoreEffect(tonumber(arg1))
-        end
     end
 end
 
@@ -339,80 +183,66 @@ function love.keypressed(key)
     end
 end
 
-local function renderWave(waveState, waveConfig)
-    local pixelPosition = waveState.position + centerX * constants.pixelSize
-
-    local y = waveY(waveConfig)
-
-    love.graphics.setColor(waveColorAt(waveConfig, waveState.position))
-    love.graphics.circle("fill", centerX, y, constants.centerCircleSize)
-
-    for col = 0, screenWidth - 1 do
-        love.graphics.setColor(waveColorAt(waveConfig, pixelPosition))
-
-        local intensity = getWaveIntensityAt(waveState, pixelPosition)
-        love.graphics.rectangle("fill",
-            col,
-            y - intensity,
-            1,
-            1)
-
-        pixelPosition = pixelPosition - constants.pixelSize
-    end
-end
-
 local function alignedRectangle(x, y, width, height, anchorX, anchorY)
     love.graphics.rectangle("fill",
         x - width * anchorX, y - height * anchorY,
         width, height)
 end
 
-local function sendCommandToBoth(command)
-    local outboundChannel = love.thread.getChannel("outbound")
-    local inboundChannel = love.thread.getChannel("inbound")
-    outboundChannel:push(command)
-    inboundChannel:push(command)
+function game.hasUnsatisfiedRequirement(entity)
+    local group = state.groupForEntity[entity]
+    for _, statName in ipairs(constants.possibleStatsOrder) do
+        if entity[statName] and entity[statName] < 0 and group[statName] < 0 then
+            -- print(entity.drawable, statName, group[statName])
+            return true
+        end
+    end
+    return false
 end
 
-local function buildPulseArgs(signal)
-    local intensity = math.random(constants.pulseMinIntesity,
-                                  constants.pulseMaxIntesity)
-    local width = math.random(constants.pulseMinWidth,
-                              constants.pulseMaxWidth)
+function game.calculateReach()
+    state.groupForEntity = {}
 
-    return signal * intensity, width
+    local mapEntities = state.mapEntities
+    local groupForEntity = state.groupForEntity
+    local queue = {}
+
+    local nextGroup = 0
+    local function genGroup()
+        nextGroup = nextGroup + 1
+        return { name = tostring(nextGroup), }
+    end
+
+    for _, initialEntity in ipairs(mapEntities) do
+        local currentGroup
+        if not groupForEntity[initialEntity] then
+            queue[1] = initialEntity
+            currentGroup = genGroup()
+        end
+        while queue[1] do
+            local entity = table.remove(queue, 1)
+            groupForEntity[entity] = currentGroup
+            for targetEntity in pairs(state.connections[entity] or {}) do
+                if not groupForEntity[targetEntity] then
+                    table.insert(queue, targetEntity)
+                end
+            end
+        end
+    end
+
+    for _, entity in ipairs(mapEntities) do
+        local group = groupForEntity[entity]
+        for _, statName in ipairs(constants.possibleStatsOrder) do
+            if entity[statName] then
+                group[statName] = group[statName] or 0
+                group[statName] = group[statName] + entity[statName]
+            end
+        end
+    end
 end
 
-function buttons.pulse_alpha_plus.onRelease()
-    sendCommandToBoth(string.format("pulse_alpha %d %d", buildPulseArgs(1)))
-end
-
-function buttons.pulse_beta_plus.onRelease()
-    sendCommandToBoth(string.format("pulse_beta %d %d", buildPulseArgs(1)))
-end
-
-function buttons.pulse_alpha_minus.onRelease()
-    sendCommandToBoth(string.format("pulse_alpha %d %d", buildPulseArgs(-1)))
-end
-
-function buttons.pulse_beta_minus.onRelease()
-    sendCommandToBoth(string.format("pulse_beta %d %d", buildPulseArgs(-1)))
-end
-
-function buttons.affinity_alpha.onRelease()
-    state.alphaWave.affinity = state.alphaWave.affinity + 1
-end
-
-function buttons.velocity_alpha.onRelease()
-    sendCommandToBoth(string.format("alpha_velocity %d", 5))
-end
-
-function buttons.affinity_beta.onRelease()
-    state.betaWave.affinity = state.betaWave.affinity + 1
-end
-
-function buttons.velocity_beta.onRelease()
-    sendCommandToBoth(string.format("beta_velocity %d", 5))
+function buttons.calculate_reach.onRelease()
+    game.calculateReach()
 end
 
 local function buttonX(button)
@@ -509,7 +339,7 @@ function game.priceBetweenPoints(sourceX, sourceY, targetX, targetY)
     return distance / 50
 end
 
-function game.drawMapEntity(entity)
+function game.drawMapEntity(entity, s)
     love.graphics.push()
     love.graphics.translate(entity.x, entity.y)
 
@@ -529,6 +359,7 @@ function game.drawMapEntity(entity)
         height * imageScale * -1/2,
         0, imageScale, imageScale)
     alignedPrint(table.concat(texts, "\n"), 5, 0, 0, 0.5, font)
+    alignedPrint(s, 0, 40, 0.5, 0, font)
 
     love.graphics.pop()
 end
@@ -540,7 +371,10 @@ end
 
 function game.addConnectionBetween(entityA, entityB)
     state.connections[entityA] = state.connections[entityA] or {}
+    state.connections[entityB] = state.connections[entityB] or {}
     state.connections[entityA][entityB] = true
+    state.connections[entityB][entityA] = true
+    game.calculateReach()
 
     local entityX, entityY = game.entityImageCenter(entityA)
     local price = game.priceBetweenPoints(entityX, entityY, game.entityImageCenter(entityB))
@@ -549,12 +383,23 @@ function game.addConnectionBetween(entityA, entityB)
     return price
 end
 
+function game.removeConnectionBetween(entityA, entityB)
+    state.connections[entityA] = state.connections[entityA] or {}
+    state.connections[entityB] = state.connections[entityB] or {}
+    state.connections[entityA][entityB] = nil
+    state.connections[entityB][entityA] = nil
+    game.calculateReach()
+
+    local price = 0.5
+    state.currentMoney = state.currentMoney - price
+    return price
+end
+
 function game.drawGame()
     love.graphics.push()
     love.graphics.translate(state.cameraPositionX, state.cameraPositionY)
 
     local mapEntities = state.mapEntities
-
     love.graphics.setColor(255, 255, 255, 256/4)
     for originEntity, targetEntities in pairs(state.connections) do
         for targetEntity in pairs(targetEntities) do
@@ -573,10 +418,12 @@ function game.drawGame()
     for _, entity in ipairs(toDraw) do
         if state.currentlySelectedEntity == entity then
             love.graphics.setColor(0, 0, 255)
+        elseif game.hasUnsatisfiedRequirement(entity) then
+            love.graphics.setColor(255, 0, 0)
         else
             love.graphics.setColor(255, 255, 255)
         end
-        game.drawMapEntity(entity)
+        game.drawMapEntity(entity, state.groupForEntity[entity].name)
     end
 
     if state.currentlySelectedEntity then
@@ -705,10 +552,13 @@ function love.mousereleased(x, y, mouseButton)
                         state.currentlySelectedEntity = nil
                         break
                     end
-                    if not game.isConnectedWith(state.currentlySelectedEntity, entity) then
-                        local price = game.addConnectionBetween(state.currentlySelectedEntity, entity)
-                        spawnTextEffect(string.format("%-.2f $", price), x, y, {255, 0, 0})
+                    local price
+                    if game.isConnectedWith(state.currentlySelectedEntity, entity) then
+                        price = game.removeConnectionBetween(state.currentlySelectedEntity, entity)
+                    else
+                        price = game.addConnectionBetween(state.currentlySelectedEntity, entity)
                     end
+                    spawnTextEffect(string.format("%-.2f $", price), x, y, {255, 0, 0})
                     state.currentlySelectedEntity = nil
                     break
                 end
@@ -718,7 +568,4 @@ function love.mousereleased(x, y, mouseButton)
 end
 
 function love.quit()
-    local messageChannel = love.thread.getChannel("outbound")
-    messageChannel:push("close")
-    -- require("multiplayer"):wait()
 end

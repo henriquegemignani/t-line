@@ -1,12 +1,14 @@
 
 return {
     possibleStatsOrder = {
-        "power",
+        "people",
         "money",
+        "power",
     },
     statsFormatting = {
-        power = "%+.2f MW",
-        money = "%+.2f $/s",
+        power = "%+.1f MW",
+        people = "%+4.f People",
+        money = "%+4.f $",
     },
     imageScale = 1/12,
 
