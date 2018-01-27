@@ -2,6 +2,7 @@
 local constants = require("constants")
 local state = require("state")
 local images = require("images")
+local util = require("util")
 
 _G.state = state
 
@@ -74,6 +75,34 @@ function love.resize()
     genGlobals()
 end
 
+function game.loadLevel(levelName)
+    local levelTable = require(levelName)
+
+    state.mapEntities = {}
+    state.connections = {}
+    for i, entity in ipairs(levelTable.entities) do
+        state.mapEntities[i] = util.tableDeepCopy(entity)
+        state.connections[state.mapEntities[i]] = {}
+    end
+
+    for i, connections in pairs(levelTable.connections) do
+        local sourceEntity = state.mapEntities[i]
+        for _, j in ipairs(connections) do
+            local targetEntity = state.mapEntities[j]
+            state.connections[sourceEntity][targetEntity] = "original"
+            state.connections[targetEntity][sourceEntity] = "original"
+        end
+    end
+
+    for _, sourceEntity in ipairs(state.mapEntities) do
+        for _, targetEntity in ipairs(state.mapEntities) do
+            if sourceEntity ~= targetEntity and not state.connections[sourceEntity][targetEntity] then
+                state.connections[sourceEntity][targetEntity] = "never"
+            end
+        end
+    end
+end
+
 function love.load()
     require("lurker").postswap = genGlobals
     require("lurker").preswap = function(name)
@@ -89,6 +118,8 @@ function love.load()
     images.house = love.graphics.newImage("house.png")
     images.nuclear_plant = love.graphics.newImage("nuclear-plant.png")
     images.solar_power = love.graphics.newImage("solar-power.png")
+
+    game.loadLevel("level1")
     game.calculateReach()
 
     genGlobals()
@@ -339,7 +370,7 @@ function game.priceBetweenPoints(sourceX, sourceY, targetX, targetY)
     return distance / 50
 end
 
-function game.drawMapEntity(entity, s)
+function game.drawMapEntity(entity)
     love.graphics.push()
     love.graphics.translate(entity.x, entity.y)
 
@@ -359,38 +390,51 @@ function game.drawMapEntity(entity, s)
         height * imageScale * -1/2,
         0, imageScale, imageScale)
     alignedPrint(table.concat(texts, "\n"), 5, 0, 0, 0.5, font)
-    alignedPrint(s, 0, 40, 0.5, 0, font)
 
     love.graphics.pop()
 end
 
 function game.isConnectedWith(entityA, entityB)
-    return (state.connections[entityA] and state.connections[entityA][entityB])
-           or (state.connections[entityB] and state.connections[entityB][entityA])
+    local connectionState = state.connections[entityA][entityB]
+    return connectionState == "original" or connectionState == "added"
 end
 
 function game.addConnectionBetween(entityA, entityB)
-    state.connections[entityA] = state.connections[entityA] or {}
-    state.connections[entityB] = state.connections[entityB] or {}
-    state.connections[entityA][entityB] = true
-    state.connections[entityB][entityA] = true
-    game.calculateReach()
-
     local entityX, entityY = game.entityImageCenter(entityA)
     local price = game.priceBetweenPoints(entityX, entityY, game.entityImageCenter(entityB))
-    state.currentMoney = state.currentMoney - price
 
+    local newState
+    if state.connections[entityA][entityB] == "never" then
+        newState = "added"
+    else
+        newState = "original"
+        price = price * -constants.connectionRemovalModifier
+    end
+    state.connections[entityA][entityB] = newState
+    state.connections[entityB][entityA] = newState
+    game.calculateReach()
+
+    state.currentMoney = state.currentMoney - price
     return price
 end
 
 function game.removeConnectionBetween(entityA, entityB)
-    state.connections[entityA] = state.connections[entityA] or {}
-    state.connections[entityB] = state.connections[entityB] or {}
-    state.connections[entityA][entityB] = nil
-    state.connections[entityB][entityA] = nil
+    local entityX, entityY = game.entityImageCenter(entityA)
+    local price = game.priceBetweenPoints(entityX, entityY, game.entityImageCenter(entityB))
+
+    local newState
+    if state.connections[entityA][entityB] == "original" then
+        newState = "removed"
+        price = price * constants.connectionRemovalModifier
+    else
+        newState = "never"
+        price = -price
+    end
+
+    state.connections[entityA][entityB] = newState
+    state.connections[entityB][entityA] = newState
     game.calculateReach()
 
-    local price = 0.5
     state.currentMoney = state.currentMoney - price
     return price
 end
@@ -400,11 +444,20 @@ function game.drawGame()
     love.graphics.translate(state.cameraPositionX, state.cameraPositionY)
 
     local mapEntities = state.mapEntities
-    love.graphics.setColor(255, 255, 255, 256/4)
-    for originEntity, targetEntities in pairs(state.connections) do
-        for targetEntity in pairs(targetEntities) do
-            local entityX, entityY = game.entityImageCenter(originEntity)
-            love.graphics.line(entityX, entityY, game.entityImageCenter(targetEntity))
+
+    for i = 1, #mapEntities do
+        for j = i + 1, #mapEntities do
+            local originEntity = mapEntities[i]
+            local targetEntity = mapEntities[j]
+            if game.isConnectedWith(originEntity, targetEntity) then
+                if state.connections[originEntity][targetEntity] == "added" then
+                    love.graphics.setColor(127, 127, 255, 256/2)
+                else
+                    love.graphics.setColor(255, 255, 255, 256/4)
+                end
+                local entityX, entityY = game.entityImageCenter(originEntity)
+                love.graphics.line(entityX, entityY, game.entityImageCenter(targetEntity))
+            end
         end
     end
     love.graphics.setColor(255, 255, 255, 255)
@@ -423,7 +476,7 @@ function game.drawGame()
         else
             love.graphics.setColor(255, 255, 255)
         end
-        game.drawMapEntity(entity, state.groupForEntity[entity].name)
+        game.drawMapEntity(entity)
     end
 
     if state.currentlySelectedEntity then
@@ -445,8 +498,8 @@ end
 local function drawHud()
     -- Score
     love.graphics.setColor(255, 255, 255, 255)
-    alignedPrint(string.format("Demand: %d MW -- Supply: %d MW -- Money: %d $",
-                               state.playerScore, 0, state.currentMoney),
+    alignedPrint(string.format("Projected Profit: %d $",
+                               state.currentMoney),
                  centerX, 5, 0.5, 0.0,
                  bigFont)
 
@@ -558,7 +611,9 @@ function love.mousereleased(x, y, mouseButton)
                     else
                         price = game.addConnectionBetween(state.currentlySelectedEntity, entity)
                     end
-                    spawnTextEffect(string.format("%-.2f $", price), x, y, {255, 0, 0})
+                    if price > 0 then
+                        spawnTextEffect(string.format("%-.2f $", price), x, y, {255, 0, 0})
+                    end
                     state.currentlySelectedEntity = nil
                     break
                 end

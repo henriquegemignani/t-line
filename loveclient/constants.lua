@@ -11,6 +11,7 @@ return {
         money = "%+4.f $",
     },
     imageScale = 1/12,
+    connectionRemovalModifier = 0.5,
 
     playerWaveInterval = 10,
     playerWaveDuration = 20,
