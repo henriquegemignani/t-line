@@ -7,6 +7,7 @@ local util = require("util")
 _G.state = state
 
 local game = {}
+_G.game = game
 
 --[[
  * Converts an HSV color value to RGB. Conversion formula
@@ -61,7 +62,6 @@ local function alignedPrint(msg, x, y, anchorX, anchorY, theFont)
 end
 
 local buttons = {}
-buttons.calculate_reach     = genButton(0.5, "REACH", constants.betaWave.hue)
 
 local function genGlobals()
     screenWidth, screenHeight = love.graphics.getDimensions()
@@ -167,21 +167,6 @@ local function spawnTextEffect(text, x, y, color)
     })
 end
 
-local function updatePlayerScoreEffect(effect, dt)
-    effect.time = effect.time + dt
-    local percent = effect.time / effect.duration
-
-    local otherPercent = percent * 2
-
-    local alpha
-    if percent < 0.5 then
-        alpha = -effect.maxAlpha * otherPercent * (otherPercent - 2)
-    else
-        alpha = effect.maxAlpha * (1 - math.pow(otherPercent - 1, 2))
-    end
-    effect.color[4] = 255 * alpha
-end
-
 local function updateArray(array, dt, updateFunc)
     local index = 1
     while index <= #array do
@@ -201,11 +186,6 @@ function love.update(dt)
     require("lovebird").update()
     updateArray(state.particles, dt, updateParticle)
     updateArray(state.textEffects, dt, updateTextEffect)
-    updateArray(state.playerScoreEffects, dt, updatePlayerScoreEffect)
-
-    if state.actionCooldownTimer > 0 then
-        state.actionCooldownTimer = math.max(state.actionCooldownTimer - dt, 0)
-    end
 end
 
 function love.keypressed(key)
@@ -224,11 +204,32 @@ function game.hasUnsatisfiedRequirement(entity)
     local group = state.groupForEntity[entity]
     for _, statName in ipairs(constants.possibleStatsOrder) do
         if entity[statName] and entity[statName] < 0 and group[statName] < 0 then
-            -- print(entity.drawable, statName, group[statName])
             return true
         end
     end
     return false
+end
+
+function game.calculateProfit()
+    local profit = 0
+
+    local mapEntities = state.mapEntities
+    for i = 1, #mapEntities do
+        for j = i + 1, #mapEntities do
+            local originEntity = mapEntities[i]
+            local targetEntity = mapEntities[j]
+            local connectionType = state.connections[originEntity][targetEntity]
+
+            if connectionType == "added" then
+                profit = profit - game.priceBetweenEntities(originEntity, targetEntity)
+            elseif connectionType == "removed" then
+                profit = profit - game.priceBetweenEntities(originEntity, targetEntity)
+                                  * constants.connectionRemovalModifier
+            end
+        end
+    end
+
+    return profit
 end
 
 function game.calculateReach()
@@ -254,7 +255,7 @@ function game.calculateReach()
             local entity = table.remove(queue, 1)
             groupForEntity[entity] = currentGroup
             for targetEntity in pairs(state.connections[entity] or {}) do
-                if not groupForEntity[targetEntity] then
+                if game.isConnectedWith(entity, targetEntity) and not groupForEntity[targetEntity] then
                     table.insert(queue, targetEntity)
                 end
             end
@@ -270,10 +271,6 @@ function game.calculateReach()
             end
         end
     end
-end
-
-function buttons.calculate_reach.onRelease()
-    game.calculateReach()
 end
 
 local function buttonX(button)
@@ -318,12 +315,6 @@ local function drawTextEffect(textEffect)
     alignedPrint(textEffect.text, textEffect.x, textEffect.y, 0.5, 0.5)
 end
 
-local function drawPlayerScoreEffect(effect)
-    local x, y = effect.x * screenWidth, effect.y * screenHeight
-    love.graphics.setColor(unpack(effect.color))
-    alignedRectangle(x, y, 4 * effect.score, 1, 0.5, 0.5)
-end
-
 local function isInsideRect(x, y, lx, rx, ly, ry)
     return lx <= x and x <= rx
        and ly <= y and y <= ry
@@ -365,9 +356,13 @@ function game.entityImageCenter(entity)
 end
 
 function game.priceBetweenPoints(sourceX, sourceY, targetX, targetY)
-    local distance = math.abs(sourceX - targetX)
-                        + math.abs(sourceY - targetY)
-    return distance / 50
+    local distance = math.abs(sourceX - targetX) + math.abs(sourceY - targetY)
+    return distance * constants.connectionPriceDistanceModifier
+end
+
+function game.priceBetweenEntities(entityA, entityB)
+    local entityX, entityY = game.entityImageCenter(entityA)
+    return game.priceBetweenPoints(entityX, entityY, game.entityImageCenter(entityB))
 end
 
 function game.drawMapEntity(entity)
@@ -390,6 +385,8 @@ function game.drawMapEntity(entity)
         height * imageScale * -1/2,
         0, imageScale, imageScale)
     alignedPrint(table.concat(texts, "\n"), 5, 0, 0, 0.5, font)
+    -- alignedPrint(state.groupForEntity[entity].name, 0, 50, 0.5, 0, font)
+
 
     love.graphics.pop()
 end
@@ -400,8 +397,7 @@ function game.isConnectedWith(entityA, entityB)
 end
 
 function game.addConnectionBetween(entityA, entityB)
-    local entityX, entityY = game.entityImageCenter(entityA)
-    local price = game.priceBetweenPoints(entityX, entityY, game.entityImageCenter(entityB))
+    local price = game.priceBetweenEntities(entityA, entityB)
 
     local newState
     if state.connections[entityA][entityB] == "never" then
@@ -419,8 +415,7 @@ function game.addConnectionBetween(entityA, entityB)
 end
 
 function game.removeConnectionBetween(entityA, entityB)
-    local entityX, entityY = game.entityImageCenter(entityA)
-    local price = game.priceBetweenPoints(entityX, entityY, game.entityImageCenter(entityB))
+    local price = game.priceBetweenEntities(entityA, entityB)
 
     local newState
     if state.connections[entityA][entityB] == "original" then
@@ -508,17 +503,8 @@ local function drawHud()
         drawButton(button)
     end
 
-    -- Player count
-    if type(state.currentPlayers) == "boolean" then
-        love.graphics.setColor(255, 0, 0, 255)
-        alignedPrint("Offline", 5, screenHeight - 5, 0, 1, smallFont)
-    else
-        love.graphics.setColor(255, 255, 0, 255)
-        alignedPrint(string.format("Current Players: %d", state.currentPlayers),
-                     5, screenHeight - 5, 0, 1, smallFont)
-    end
-        alignedPrint(string.format("FPS: %d", love.timer.getFPS()),
-                     screenWidth - 5, screenHeight - 5, 1, 1, smallFont)
+    alignedPrint(string.format("FPS: %d", love.timer.getFPS()),
+                 screenWidth - 5, screenHeight - 5, 1, 1, smallFont)
 
     -- Particles
     for _, particle in ipairs(state.particles) do
@@ -528,11 +514,6 @@ local function drawHud()
     -- Text Effects
     for _, textEffect in ipairs(state.textEffects) do
         drawTextEffect(textEffect)
-    end
-
-    -- Text Effects
-    for _, effect in ipairs(state.playerScoreEffects) do
-        drawPlayerScoreEffect(effect)
     end
 end
 

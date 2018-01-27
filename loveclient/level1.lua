@@ -22,8 +22,8 @@ local entities = {
     },
     {
         drawable = "house",
-        x = 380,
-        y = 220,
+        x = 400,
+        y = 230,
         power = -.6,
         people = 6,
     },
