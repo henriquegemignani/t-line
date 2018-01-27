@@ -24,8 +24,8 @@ end
 
 local function createButtons()
     for i, level in ipairs(require("levels")) do
-        local xIndex = (i % constants.levelsPerRow) / (constants.levelsPerRow - 1)
-        local yIndex = math.floor(i / constants.levelsPerRow)
+        local xIndex = ((i - 1) % constants.levelsPerRow) / (constants.levelsPerRow - 1)
+        local yIndex = math.floor((i - 1) / constants.levelsPerRow)
         buttons[i] = {
             x = xIndex * (1.0 - constants.levelSelectionHorizontalMargin * 2)
                 + constants.levelSelectionHorizontalMargin,
@@ -34,8 +34,8 @@ local function createButtons()
                 + constants.levelSelectionVerticalMargin,
             label = level.name,
             width = 140, height = 50,
-            saturation = 0.8,
-            hue = 1,
+            saturation = 0,
+            hue = 0.5,
             onRelease = function()
                 game.loadLevel(level.file)
             end,

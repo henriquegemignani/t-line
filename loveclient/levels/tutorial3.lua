@@ -1,23 +1,24 @@
 local entities = {
     {
         drawable = "solar_power",
-        x = -200,
-        y = -100,
+        x = 0,
+        y = 0,
         power = 2,
     },
     {
         drawable = "factory",
-        x = 250,
+        x = -250,
         y = -100,
         power = -1,
-        money = 8,
+        money = 15,
+        people = -3,
     },
     {
-        drawable = "factory",
-        x = 100,
-        y = -200,
-        power = -1,
-        money = 5,
+        drawable = "house",
+        x = 250,
+        y = -100,
+        power = -0.5,
+        people = 3,
     },
 }
 
@@ -28,8 +29,8 @@ return {
     entities = entities,
     connections = connections,
     tutorialMessage = {
-        x = 25,
+        x = 0,
         y = 100,
-        text = "Making connections costs money, based on distance.\nPrefer multiple small connections!",
+        text = "Factories requires workers, found in houses.",
     },
 }
