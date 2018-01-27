@@ -23,6 +23,7 @@ return {
     tutorialMessage = {
         x = 0,
         y = 100,
-        text = "Factories needs power to operate.\nConnect a solar station to provide power!",
+        text = "Factories needs power to operate.\nConnect a solar station to provide power!" ..
+                "\n\nWhen finished, press Submit.",
     },
 }

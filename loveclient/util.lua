@@ -73,4 +73,53 @@ function util.alignedPrint(msg, x, y, anchorX, anchorY, theFont)
     love.graphics.print(msg, x - w * anchorX, y - h * anchorY)
 end
 
+local function buttonX(button)
+    return button.x * screenWidth
+end
+
+local function buttonY(button)
+    return button.y * screenHeight
+end
+
+function util.alignedRectangle(x, y, width, height, anchorX, anchorY)
+    love.graphics.rectangle("fill",
+        x - width * anchorX, y - height * anchorY,
+        width, height)
+end
+
+function util.isInsideButton(button, x, y)
+    local bx = buttonX(button)
+    local by = buttonY(button)
+    local hWidth = button.width / 2
+    local hHeight = button.height / 2
+    return util.isInsideRect(x, y,
+        bx - hWidth,  bx + hWidth,
+        by - hHeight, by + hHeight
+    )
+end
+
+function util.drawButton(button)
+    local x = buttonX(button)
+    local y = buttonY(button)
+    local label = button.label
+    local width = button.width
+    local height = button.height
+    local border = 4
+
+    love.graphics.setColor(util.hsvToRgb(button.hue, button.saturation,
+        button.pressing and 0.8 or 0.5, 1))
+    util.alignedRectangle(x, y, width + border, height + border, 0.5, 0.5)
+
+    love.graphics.setColor(util.hsvToRgb(button.hue, button.saturation,
+        button.hover and 0.4 or 0.3, 1))
+    util.alignedRectangle(x, y, width, height, 0.5, 0.5)
+
+    love.graphics.setColor(util.hsvToRgb(button.hue, button.saturation * 0.5, 1, 1))
+    if type(label) == "string" then
+        util.alignedPrint(label, x, y, 0.5, 0.5)
+    else
+        label(x, y)
+    end
+end
+
 return util

@@ -87,7 +87,13 @@ function game.calculateProfit()
     end
 
     for _, group in ipairs(state.entityGroups) do
-        if group.money and group.money > 0 then
+        local unsatisfiedGroup = false
+        for _, statName in ipairs(constants.possibleStatsOrder) do
+            if group[statName] and group[statName] < 0 then
+                unsatisfiedGroup = true
+            end
+        end
+        if group.money and group.money > 0 and not unsatisfiedGroup then
             profit = profit + group.money
         end
     end
@@ -270,11 +276,11 @@ function game.drawGame()
 
     for _, entity in ipairs(toDraw) do
         if state.currentlySelectedEntity == entity then
-            love.graphics.setColor(0, 0, 255)
+            love.graphics.setColor(100, 100, 255)
         elseif game.hasUnsatisfiedRequirement(entity) then
             love.graphics.setColor(255, 0, 0)
         else
-            love.graphics.setColor(255, 255, 255)
+            love.graphics.setColor(200, 255, 200)
         end
         game.drawMapEntity(entity)
     end
@@ -307,10 +313,9 @@ end
 function game.drawHud()
     -- Score
     love.graphics.setColor(255, 255, 255, 255)
-    util.alignedPrint(string.format("Projected Profit: %d $",
-                               state.currentMoney),
-                 centerX, 5, 0.5, 0.0,
-                 bigFont)
+    util.alignedPrint(string.format("Projected Profit: %d $", state.currentMoney),
+                      centerX, 15, 0.5, 0.0,
+                      bigFont)
 end
 
 return game

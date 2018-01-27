@@ -132,44 +132,6 @@ function love.keypressed(key)
     end
 end
 
-local function alignedRectangle(x, y, width, height, anchorX, anchorY)
-    love.graphics.rectangle("fill",
-        x - width * anchorX, y - height * anchorY,
-        width, height)
-end
-
-local function buttonX(button)
-    return button.x * screenWidth
-end
-
-local function buttonY(button)
-    return button.y * screenHeight
-end
-
-local function drawButton(button)
-    local x = buttonX(button)
-    local y = buttonY(button)
-    local label = button.label
-    local width = button.width
-    local height = button.height
-    local border = 4
-
-    love.graphics.setColor(util.hsvToRgb(button.hue, button.saturation,
-        button.pressing and 0.8 or 0.5, 1))
-    alignedRectangle(x, y, width + border, height + border, 0.5, 0.5)
-
-    love.graphics.setColor(util.hsvToRgb(button.hue, button.saturation,
-        button.hover and 0.4 or 0.3, 1))
-    alignedRectangle(x, y, width, height, 0.5, 0.5)
-
-    love.graphics.setColor(util.hsvToRgb(button.hue, button.saturation * 0.5, 1, 1))
-    if type(label) == "string" then
-        util.alignedPrint(label, x, y, 0.5, 0.5)
-    else
-        label(x, y)
-    end
-end
-
 local function drawParticle(particle)
     love.graphics.setColor(unpack(particle.color))
     love.graphics.circle("fill", particle.x, particle.y, particle.radius)
@@ -180,17 +142,6 @@ local function drawTextEffect(textEffect)
     util.alignedPrint(textEffect.text, textEffect.x, textEffect.y, 0.5, 0.5)
 end
 
-local function isInsideButton(button, x, y)
-    local bx = buttonX(button)
-    local by = buttonY(button)
-    local hWidth = button.width / 2
-    local hHeight = button.height / 2
-    return util.isInsideRect(x, y,
-        bx - hWidth,  bx + hWidth,
-        by - hHeight, by + hHeight
-    )
-end
-
 
 function love.draw()
     love.graphics.reset()
@@ -198,7 +149,7 @@ function love.draw()
 
     if state.currentScreen == "levelSelect" then
         for _, button in pairs(buttons) do
-            drawButton(button)
+            util.drawButton(button)
         end
     else
         game.drawGame()
@@ -228,7 +179,7 @@ function love.mousemoved(x, y)
     --     state.lastMouseY = y
     -- end
     for _, button in pairs(buttons) do
-        local isInside = isInsideButton(button, x, y)
+        local isInside = util.isInsideButton(button, x, y)
         if state.mouseDown then
             button.hover = button.hover and isInside
             button.pressing = button.pressing and isInside
@@ -246,7 +197,7 @@ function love.mousepressed(x, y, mouseButton)
 
         local clickedAButton = false
         for _, button in pairs(buttons) do
-            if isInsideButton(button, x, y) then
+            if util.isInsideButton(button, x, y) then
                 button.pressing = true
                 clickedAButton = true
                 break
@@ -269,7 +220,7 @@ function love.mousereleased(x, y, mouseButton)
     if mouseButton == 1 then
         state.mouseDown = false
         for _, button in pairs(buttons) do
-            if button.pressing and isInsideButton(button, x, y) then
+            if button.pressing and util.isInsideButton(button, x, y) then
                 state.actionCooldownTimer = constants.actionCooldown
                 button.onRelease()
             end
@@ -279,7 +230,6 @@ function love.mousereleased(x, y, mouseButton)
             for _, entity in ipairs(state.mapEntities) do
                 if game.isInsideEntity(entity, x, y) then
                     if entity == state.currentlySelectedEntity then
-                        state.currentlySelectedEntity = nil
                         break
                     end
                     local price

@@ -15,14 +15,14 @@ local entities = {
     },
     {
         drawable = "house",
-        x = 580,
+        x = 600,
         y = 120,
         power = -.3,
         people = 4,
     },
     {
         drawable = "house",
-        x = 400,
+        x = 450,
         y = 230,
         power = -.6,
         people = 6,
@@ -31,8 +31,14 @@ local entities = {
         drawable = "nuclear_plant",
         x = 1200,
         y = 500,
-        power = 8,
-        money = -30,
+        power = 6,
+        money = -20,
+    },
+    {
+        drawable = "solar_power",
+        x = 180,
+        y = 300,
+        power = 1.5,
     },
 }
 
