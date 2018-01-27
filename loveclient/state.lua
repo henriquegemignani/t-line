@@ -1,5 +1,7 @@
 
 return {
+    currentScreen = "levelSelect",
+
     cameraPositionX = 0,
     cameraPositionY = 0,
     mapEntities = {},
