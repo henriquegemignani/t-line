@@ -1,6 +1,6 @@
 return {
     {
         name = "Tutorial 1",
-        file = "level1.lua",
+        file = "tutorial1.lua",
     }
 }

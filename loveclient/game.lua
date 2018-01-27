@@ -10,11 +10,26 @@ local game = {}
 function game.loadLevel(levelName)
     local levelTable = love.filesystem.load("levels/" .. levelName)()
 
+    local minX, minY = math.huge, math.huge
+    local maxX, maxY = -math.huge, -math.huge
+
+    local function doMinMax(t)
+        minX = math.min(minX, t.x)
+        minY = math.min(minY, t.y)
+        maxX = math.max(maxX, t.x)
+        maxY = math.max(maxY, t.y)
+    end
+
     state.mapEntities = {}
     state.connections = {}
     for i, entity in ipairs(levelTable.entities) do
+        doMinMax(entity)
         state.mapEntities[i] = util.tableDeepCopy(entity)
         state.connections[state.mapEntities[i]] = {}
+    end
+
+    if levelTable.tutorialMessage then
+        doMinMax(levelTable.tutorialMessage)
     end
 
     for i, connections in pairs(levelTable.connections) do
@@ -34,6 +49,11 @@ function game.loadLevel(levelName)
         end
     end
     game.calculateReach()
+
+    state.currentTutorialMessage = levelTable.tutorialMessage
+    state.cameraPositionX = centerX - (maxX + minX) / 2
+    state.cameraPositionY = centerY - (maxY + minY) / 2
+
     state.currentScreen = "game"
 end
 
@@ -262,6 +282,15 @@ function game.drawGame()
 
         util.alignedPrint(string.format("-%d $", game.priceBetweenPoints(mouseX, mouseY, entityX, entityY)),
                      mouseX + 10, mouseY + 10, 0, 0)
+    end
+
+
+    if state.currentTutorialMessage then
+        local message = state.currentTutorialMessage
+        local width = font:getWidth(message.text)
+
+        love.graphics.setColor(255, 255, 255, 255)
+        love.graphics.printf(message.text, message.x - width / 2, message.y, width, "center")
     end
 
     love.graphics.pop()
