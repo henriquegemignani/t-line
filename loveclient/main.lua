@@ -89,22 +89,6 @@ local function updateTextEffect(textEffect, dt)
     textEffect.color[4] = 255 * (1 - math.pow(percent, 2))
 end
 
-local function spawnTextEffect(text, x, y, color)
-    table.insert(state.textEffects, {
-        fromX = x,
-        fromY = y,
-        toX = x,
-        toY = y + 30,
-        color = color,
-        x = x,
-        y = y,
-        time = 0,
-        duration = 1.5,
-        text = text,
-        onComplete = function() end,
-    })
-end
-
 local function updateArray(array, dt, updateFunc)
     local index = 1
     while index <= #array do
@@ -129,6 +113,8 @@ end
 function love.keypressed(key)
     if key == "r" then
         love.event.quit("restart")
+    elseif key == "escape" then
+        state.currentScreen = "levelSelect"
     end
 end
 
@@ -154,6 +140,7 @@ function love.draw()
     else
         game.drawGame()
         game.drawHud()
+        util.drawButton(game.submitButton)
     end
 
     -- Action buttons
@@ -179,14 +166,9 @@ function love.mousemoved(x, y)
     --     state.lastMouseY = y
     -- end
     for _, button in pairs(buttons) do
-        local isInside = util.isInsideButton(button, x, y)
-        if state.mouseDown then
-            button.hover = button.hover and isInside
-            button.pressing = button.pressing and isInside
-        else
-            button.hover = isInside
-        end
+        util.checkMouseMovedButton(button, x, y)
     end
+    util.checkMouseMovedButton(game.submitButton, x, y)
 end
 
 function love.mousepressed(x, y, mouseButton)
@@ -197,12 +179,9 @@ function love.mousepressed(x, y, mouseButton)
 
         local clickedAButton = false
         for _, button in pairs(buttons) do
-            if util.isInsideButton(button, x, y) then
-                button.pressing = true
-                clickedAButton = true
-                break
-            end
+            clickedAButton = clickedAButton or util.checkMousePressedButton(button, x, y)
         end
+        clickedAButton = clickedAButton or util.checkMousePressedButton(game.submitButton, x, y)
         if not state.currentlySelectedEntity then
             for _, entity in ipairs(state.mapEntities) do
                 if game.isInsideEntity(entity, x, y) then
@@ -220,12 +199,9 @@ function love.mousereleased(x, y, mouseButton)
     if mouseButton == 1 then
         state.mouseDown = false
         for _, button in pairs(buttons) do
-            if button.pressing and util.isInsideButton(button, x, y) then
-                state.actionCooldownTimer = constants.actionCooldown
-                button.onRelease()
-            end
-            button.pressing = false
+            util.checkMouseReleasedButton(button, x, y)
         end
+        util.checkMouseReleasedButton(game.submitButton, x, y)
         if state.currentlySelectedEntity then
             for _, entity in ipairs(state.mapEntities) do
                 if game.isInsideEntity(entity, x, y) then
@@ -239,7 +215,7 @@ function love.mousereleased(x, y, mouseButton)
                         price = game.addConnectionBetween(state.currentlySelectedEntity, entity)
                     end
                     if price > 0 then
-                        spawnTextEffect(string.format("%-.2f $", price), x, y, {255, 0, 0})
+                        util.spawnTextEffect(string.format("%-.2f $", price), x, y, {255, 0, 0})
                     end
                     break
                 end

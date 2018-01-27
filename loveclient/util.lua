@@ -122,4 +122,46 @@ function util.drawButton(button)
     end
 end
 
+function util.checkMouseMovedButton(button, x, y)
+    local state = require("state")
+    local isInside = util.isInsideButton(button, x, y)
+    if state.mouseDown then
+        button.hover = button.hover and isInside
+        button.pressing = button.pressing and isInside
+    else
+        button.hover = isInside
+    end
+end
+
+function util.checkMousePressedButton(button, x, y)
+    if util.isInsideButton(button, x, y) then
+        button.pressing = true
+        return true
+    end
+end
+
+function util.checkMouseReleasedButton(button, x, y)
+    if button.pressing and util.isInsideButton(button, x, y) then
+        button.onRelease()
+    end
+    button.pressing = false
+end
+
+function util.spawnTextEffect(text, x, y, color)
+    local state = require("state")
+    table.insert(state.textEffects, {
+        fromX = x,
+        fromY = y,
+        toX = x,
+        toY = y + 30,
+        color = color,
+        x = x,
+        y = y,
+        time = 0,
+        duration = 1.5,
+        text = text,
+        onComplete = function() end,
+    })
+end
+
 return util

@@ -6,6 +6,19 @@ local util = require("util")
 
 local game = {}
 
+game.submitButton = {
+    x = 0.5,
+    y = 0.9,
+    label = "Submit",
+    width = 140,
+    height = 50,
+    saturation = 0.8,
+    hue = 1,
+    onRelease = function()
+        game.submitSolution()
+    end,
+}
+
 
 function game.loadLevel(levelName)
     local levelTable = love.filesystem.load("levels/" .. levelName)()
@@ -143,6 +156,7 @@ function game.calculateReach()
             end
         end
     end
+    state.currentMoney = game.calculateProfit()
 end
 
 function game.isInsideEntity(entity, mouseX, mouseY)
@@ -221,7 +235,6 @@ function game.addConnectionBetween(entityA, entityB)
     state.connections[entityA][entityB] = newState
     state.connections[entityB][entityA] = newState
     game.calculateReach()
-    state.currentMoney = game.calculateProfit()
 
     return price
 end
@@ -241,7 +254,6 @@ function game.removeConnectionBetween(entityA, entityB)
     state.connections[entityA][entityB] = newState
     state.connections[entityB][entityA] = newState
     game.calculateReach()
-    state.currentMoney = game.calculateProfit()
     return price
 end
 
@@ -318,6 +330,15 @@ function game.drawHud()
     util.alignedPrint(string.format("Projected Profit: %d $", state.currentMoney),
                       centerX, 15, 0.5, 0.0,
                       bigFont)
+end
+
+function game.submitSolution()
+    if state.currentMoney > 0 then
+        state.currentScreen = "levelSelect"
+    else
+        local x, y = love.mouse.getPosition()
+        util.spawnTextEffect("Invalid Solution!", x, y, {255, 255, 255})
+    end
 end
 
 return game
