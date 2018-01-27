@@ -124,6 +124,9 @@ local function drawParticle(particle)
 end
 
 local function drawTextEffect(textEffect)
+    love.graphics.setColor(255, 255, 255, textEffect.color[4])
+    util.alignedPrint(textEffect.text, textEffect.x, textEffect.y, 0.5, 0.5)
+
     love.graphics.setColor(unpack(textEffect.color))
     util.alignedPrint(textEffect.text, textEffect.x, textEffect.y, 0.5, 0.5)
 end

@@ -182,8 +182,10 @@ function game.entityImageCenter(entity)
 end
 
 function game.priceBetweenPoints(sourceX, sourceY, targetX, targetY)
-    local distance = math.abs(sourceX - targetX) + math.abs(sourceY - targetY)
-    return distance * constants.connectionPriceDistanceModifier
+    local dx = (sourceX - targetX) * constants.distanceScale
+    local dy = (sourceY - targetY) * constants.distanceScale
+    local distance = math.sqrt(dx ^ 2 + dy ^ 2)
+    return math.floor(distance * constants.connectionPriceDistanceModifier)
 end
 
 function game.priceBetweenEntities(entityA, entityB)
@@ -327,7 +329,7 @@ end
 function game.drawHud()
     -- Score
     love.graphics.setColor(255, 255, 255, 255)
-    util.alignedPrint(string.format("Projected Profit: %d $", state.currentMoney),
+    util.alignedPrint(string.format("Projected Profit: %.2f $", state.currentMoney),
                       centerX, 15, 0.5, 0.0,
                       bigFont)
 end

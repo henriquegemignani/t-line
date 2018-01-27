@@ -11,8 +11,9 @@ return {
         money = "%+4.f $",
     },
     imageScale = 1/12,
+    distanceScale = 0.5,
     connectionRemovalModifier = 0.5,
-    connectionPriceDistanceModifier = 0.02,
+    connectionPriceDistanceModifier = 0.04,
 
     levelSelectionNumRows = 8,
     levelsPerRow = 5,
