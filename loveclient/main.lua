@@ -172,10 +172,13 @@ function love.draw()
 end
 
 function love.mousemoved(x, y)
-    for _, button in pairs(buttons) do
-        util.checkMouseMovedButton(button, x, y)
+    if state.currentScreen == "levelSelect" then
+        for _, button in pairs(buttons) do
+            util.checkMouseMovedButton(button, x, y)
+        end
+    else
+        util.checkMouseMovedButton(game.submitButton, x, y)
     end
-    util.checkMouseMovedButton(game.submitButton, x, y)
 end
 
 function love.mousepressed(x, y, mouseButton)
@@ -185,16 +188,19 @@ function love.mousepressed(x, y, mouseButton)
         state.lastMouseY = y
 
         local clickedAButton = false
-        for _, button in pairs(buttons) do
-            clickedAButton = clickedAButton or util.checkMousePressedButton(button, x, y)
-        end
-        clickedAButton = clickedAButton or util.checkMousePressedButton(game.submitButton, x, y)
-        if not state.currentlySelectedEntity then
-            for _, entity in ipairs(state.mapEntities) do
-                if game.isInsideEntity(entity, x, y) then
-                    state.currentlySelectedEntity = entity
-                    clickedAButton = true
-                    break
+        if state.currentScreen == "levelSelect" then
+            for _, button in pairs(buttons) do
+                clickedAButton = clickedAButton or util.checkMousePressedButton(button, x, y)
+            end
+        else
+            clickedAButton = clickedAButton or util.checkMousePressedButton(game.submitButton, x, y)
+            if not state.currentlySelectedEntity then
+                for _, entity in ipairs(state.mapEntities) do
+                    if game.isInsideEntity(entity, x, y) then
+                        state.currentlySelectedEntity = entity
+                        clickedAButton = true
+                        break
+                    end
                 end
             end
         end
@@ -205,30 +211,33 @@ end
 function love.mousereleased(x, y, mouseButton)
     if mouseButton == 1 then
         state.mouseDown = false
-        for _, button in pairs(buttons) do
-            util.checkMouseReleasedButton(button, x, y)
-        end
-        util.checkMouseReleasedButton(game.submitButton, x, y)
-        if state.currentlySelectedEntity then
-            for _, entity in ipairs(state.mapEntities) do
-                if game.isInsideEntity(entity, x, y) then
-                    if entity == state.currentlySelectedEntity then
+        if state.currentScreen == "levelSelect" then
+            for _, button in pairs(buttons) do
+                util.checkMouseReleasedButton(button, x, y)
+            end
+        else
+            util.checkMouseReleasedButton(game.submitButton, x, y)
+            if state.currentlySelectedEntity then
+                for _, entity in ipairs(state.mapEntities) do
+                    if game.isInsideEntity(entity, x, y) then
+                        if entity == state.currentlySelectedEntity then
+                            break
+                        end
+                        local price
+                        if game.isConnectedWith(state.currentlySelectedEntity, entity) then
+                            price = game.removeConnectionBetween(state.currentlySelectedEntity, entity)
+                        else
+                            price = game.addConnectionBetween(state.currentlySelectedEntity, entity)
+                        end
+                        if price > 0 then
+                            util.spawnTextEffect(string.format("%-.2f $", price), x, y, {255, 0, 0})
+                        end
                         break
                     end
-                    local price
-                    if game.isConnectedWith(state.currentlySelectedEntity, entity) then
-                        price = game.removeConnectionBetween(state.currentlySelectedEntity, entity)
-                    else
-                        price = game.addConnectionBetween(state.currentlySelectedEntity, entity)
-                    end
-                    if price > 0 then
-                        util.spawnTextEffect(string.format("%-.2f $", price), x, y, {255, 0, 0})
-                    end
-                    break
                 end
             end
+            state.currentlySelectedEntity = nil
         end
-        state.currentlySelectedEntity = nil
     end
 end
 
