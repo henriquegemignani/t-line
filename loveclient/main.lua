@@ -141,6 +141,11 @@ function love.draw()
     love.graphics.setColor(255, 255, 255)
 
     if state.currentScreen == "levelSelect" then
+        love.graphics.setColor(0, 255, 255, 255)
+        util.alignedPrint("T-Line", buttons[1].x * screenWidth,
+                          50, 0, 0, bigFont)
+        love.graphics.setColor(255, 255, 255, 255)
+
         for _, button in pairs(buttons) do
             util.drawButton(button)
         end

@@ -3,11 +3,11 @@ function love.conf(t)
     t.version = '0.10.2'
     t.window.display = 1
     t.window.centered = true
-    t.window.title = "GGJ2018"
+    t.window.title = "T-Line"
     t.window.resizable = false
     t.window.width = 1280
     t.window.height = 720
-	
+
 	t.modules.thread = false
 	t.modules.touch = false
 	t.modules.joystick = false
