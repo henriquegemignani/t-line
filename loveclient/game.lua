@@ -174,7 +174,7 @@ function game.isInsideEntity(entity, mouseX, mouseY)
 
     return util.isInsideRect(
         mouseX - state.cameraPositionX, mouseY - state.cameraPositionY,
-        entity.x - width * imageScale, entity.x,
+        entity.x - width * imageScale, entity.x + 100,
         entity.y + height * imageScale * -1/2, entity.y + height * imageScale * 1/2
     )
 end
