@@ -10,7 +10,7 @@ return {
         people = "%+4.f People",
         money = "%+4.f $",
     },
-    imageScale = 1/12,
+    imageScale = 8/12,
     distanceScale = 0.58,
     connectionRemovalModifier = 0.5,
     connectionPriceDistanceModifier = 0.04,
