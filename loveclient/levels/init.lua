@@ -35,4 +35,8 @@ return {
         name = "Level 4",
         file = "level4.lua",
     },
+    {
+        name = "Level 5",
+        file = "level5.lua",
+    },
 }
