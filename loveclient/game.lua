@@ -3,7 +3,7 @@ local state = require("state")
 local images = require("images")
 local util = require("util")
 
-
+local setColor = love.graphics.setColor
 local game = {}
 
 game.submitButton = {
@@ -271,21 +271,21 @@ function game.drawGame()
     local mapEntities = state.mapEntities
 
     for i = 1, #mapEntities do
+        local originEntity = mapEntities[i]
         for j = i + 1, #mapEntities do
-            local originEntity = mapEntities[i]
             local targetEntity = mapEntities[j]
             if game.isConnectedWith(originEntity, targetEntity) then
                 if state.connections[originEntity][targetEntity] == "added" then
-                    love.graphics.setColor(127, 127, 255, 256/2)
+                    setColor(127, 127, 255, 256/2)
                 else
-                    love.graphics.setColor(255, 255, 255, 256/4)
+                    setColor(255, 255, 255, 256/4)
                 end
                 local entityX, entityY = game.entityImageCenter(originEntity)
                 love.graphics.line(entityX, entityY, game.entityImageCenter(targetEntity))
             end
         end
     end
-    love.graphics.setColor(255, 255, 255, 255)
+    setColor(255, 255, 255, 255)
 
     local toDraw = {}
     for i, entity in ipairs(mapEntities) do
@@ -295,21 +295,21 @@ function game.drawGame()
 
     for _, entity in ipairs(toDraw) do
         if state.currentlySelectedEntity == entity then
-            love.graphics.setColor(100, 100, 255)
+            setColor(100, 100, 255)
         elseif not game.isEntityActive(entity) then
-            love.graphics.setColor(100, 100, 100)
+            setColor(100, 100, 100)
         elseif entity.power and entity.power > 0 then
-            love.graphics.setColor(255, 255, 100)
+            setColor(255, 255, 100)
         elseif game.hasUnsatisfiedRequirement(entity) then
-            love.graphics.setColor(255, 0, 0)
+            setColor(255, 0, 0)
         else
-            love.graphics.setColor(200, 255, 200)
+            setColor(200, 255, 200)
         end
         game.drawMapEntity(entity)
     end
 
     if state.currentlySelectedEntity then
-        love.graphics.setColor(0, 0, 255)
+        setColor(0, 0, 255)
         local mouseX, mouseY = love.mouse.getPosition()
         mouseX = mouseX - state.cameraPositionX
         mouseY = mouseY - state.cameraPositionY
@@ -326,7 +326,7 @@ function game.drawGame()
         local message = state.currentTutorialMessage
         local width = font:getWidth(message.text)
 
-        love.graphics.setColor(255, 255, 255, 255)
+        setColor(255, 255, 255, 255)
         love.graphics.printf(message.text, message.x - width / 2, message.y, width, "center")
     end
 
@@ -336,9 +336,9 @@ end
 function game.drawHud()
     -- Score
     if state.currentMoney <= 0 then
-        love.graphics.setColor(255, 100, 100, 255)
+        setColor(255, 100, 100, 255)
     else
-        love.graphics.setColor(255, 255, 255, 255)
+        setColor(255, 255, 255, 255)
     end
     util.alignedPrint(string.format("Projected Profit: %.2f $", state.currentMoney),
                       centerX, 15, 0.5, 0.0,
