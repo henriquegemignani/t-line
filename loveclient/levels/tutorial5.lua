@@ -3,7 +3,7 @@ local entities = {
         drawable = "solar_power",
         x = 0,
         y = 100,
-        power = 1.5,
+        power = 2.0,
     },
     {
         drawable = "factory",
@@ -32,7 +32,7 @@ local entities = {
         drawable = "nuclear_plant",
         x = 500,
         y = 0,
-        power = 6,
+        power = 8,
         money = -20,
     },
     {

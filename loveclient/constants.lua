@@ -11,7 +11,7 @@ return {
         money = "%+4.f $",
     },
     imageScale = 1/12,
-    distanceScale = 0.5,
+    distanceScale = 0.58,
     connectionRemovalModifier = 0.5,
     connectionPriceDistanceModifier = 0.04,
 

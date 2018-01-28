@@ -85,8 +85,8 @@ function game.calculateProfit()
 
     local mapEntities = state.mapEntities
     for i = 1, #mapEntities do
+        local originEntity = mapEntities[i]
         for j = i + 1, #mapEntities do
-            local originEntity = mapEntities[i]
             local targetEntity = mapEntities[j]
             local connectionType = state.connections[originEntity][targetEntity]
 
@@ -102,11 +102,11 @@ function game.calculateProfit()
     for _, group in ipairs(state.entityGroups) do
         local unsatisfiedGroup = false
         for _, statName in ipairs(constants.possibleStatsOrder) do
-            if group[statName] and group[statName] < 0 then
+            if group[statName] and group[statName] < 0 and statName ~= "money" then
                 unsatisfiedGroup = true
             end
         end
-        if group.money and group.money > 0 and not unsatisfiedGroup then
+        if group.money and not unsatisfiedGroup and group.count > 1 then
             profit = profit + group.money
         end
     end
@@ -125,7 +125,7 @@ function game.calculateReach()
     local nextGroup = 0
     local function genGroup()
         nextGroup = nextGroup + 1
-        local group = { name = tostring(nextGroup), }
+        local group = { name = tostring(nextGroup), count = 0, }
         table.insert(state.entityGroups, group)
         return group
     end
@@ -139,7 +139,8 @@ function game.calculateReach()
         while queue[1] do
             local entity = table.remove(queue, 1)
             groupForEntity[entity] = currentGroup
-            for targetEntity in pairs(state.connections[entity] or {}) do
+            currentGroup.count = currentGroup.count + 1
+            for targetEntity in pairs(state.connections[entity]) do
                 if game.isConnectedWith(entity, targetEntity) and not groupForEntity[targetEntity] then
                     table.insert(queue, targetEntity)
                 end
@@ -259,6 +260,10 @@ function game.removeConnectionBetween(entityA, entityB)
     return price
 end
 
+function game.isEntityActive(entity)
+    return state.groupForEntity[entity].count > 1
+end
+
 function game.drawGame()
     love.graphics.push()
     love.graphics.translate(state.cameraPositionX, state.cameraPositionY)
@@ -291,6 +296,8 @@ function game.drawGame()
     for _, entity in ipairs(toDraw) do
         if state.currentlySelectedEntity == entity then
             love.graphics.setColor(100, 100, 255)
+        elseif not game.isEntityActive(entity) then
+            love.graphics.setColor(100, 100, 100)
         elseif entity.power and entity.power > 0 then
             love.graphics.setColor(255, 255, 100)
         elseif game.hasUnsatisfiedRequirement(entity) then

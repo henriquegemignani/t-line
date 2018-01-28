@@ -162,12 +162,6 @@ function love.draw()
 end
 
 function love.mousemoved(x, y)
-    -- if state.mouseDown and not state.clickedAButton then
-    --     state.cameraPositionX = state.cameraPositionX + (x - state.lastMouseX)
-    --     state.cameraPositionY = state.cameraPositionY + (y - state.lastMouseY)
-    --     state.lastMouseX = x
-    --     state.lastMouseY = y
-    -- end
     for _, button in pairs(buttons) do
         util.checkMouseMovedButton(button, x, y)
     end
