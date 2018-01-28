@@ -31,6 +31,7 @@ return {
     tutorialMessage = {
         x = 0,
         y = 100,
-        text = "Factories requires workers, found in houses.",
+        text = "Factories requires workers, found in houses."
+            .. "\nHouses does not have to connected directly to the factory.",
     },
 }

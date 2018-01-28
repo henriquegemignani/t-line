@@ -30,6 +30,7 @@ return {
     tutorialMessage = {
         x = 25,
         y = 100,
-        text = "Making connections costs money, based on distance.\nPrefer multiple small connections!",
+        text = "Making connections costs money, based on distance.\nPrefer multiple small connections!"
+            .. "\n\nTo remove a connection, perform the same action used to create it.",
     },
 }
