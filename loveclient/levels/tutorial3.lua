@@ -32,6 +32,6 @@ return {
         x = 0,
         y = 100,
         text = "Factories requires workers, found in houses."
-            .. "\nHouses does not have to connected directly to the factory.",
+            .. "\nHouses does not have to be connected directly to the factory.",
     },
 }
