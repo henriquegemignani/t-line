@@ -23,10 +23,10 @@ function love.resize()
 end
 
 local function createButtons()
-    for i, level in ipairs(require("levels")) do
-        local xIndex = ((i - 1) % constants.levelsPerRow) / (constants.levelsPerRow - 1)
-        local yIndex = math.floor((i - 1) / constants.levelsPerRow)
-        buttons[i] = {
+    local levels = require("levels")
+
+    local function createButton(level, xIndex, yIndex)
+        return {
             x = xIndex * (1.0 - constants.levelSelectionHorizontalMargin * 2)
                 + constants.levelSelectionHorizontalMargin,
             y = ((1 + yIndex) / constants.levelSelectionNumRows)
@@ -40,6 +40,20 @@ local function createButtons()
                 game.loadLevel(level.file)
             end,
         }
+    end
+
+    local levelOffset
+    for i, level in ipairs(levels.tutorials) do
+        local xIndex = ((i - 1) % constants.levelsPerRow) / (constants.levelsPerRow - 1)
+        local yIndex = math.floor((i - 1) / constants.levelsPerRow)
+        buttons[i] = createButton(level, xIndex, yIndex + 1)
+        levelOffset = i
+    end
+
+    for i, level in ipairs(levels.levels) do
+        local xIndex = ((i - 1) % constants.levelsPerRow) / (constants.levelsPerRow - 1)
+        local yIndex = math.floor((i - 1) / constants.levelsPerRow)
+        buttons[levelOffset + i] = createButton(level, xIndex, yIndex + 3)
     end
 end
 createButtons()
@@ -130,6 +144,12 @@ function love.draw()
         for _, button in pairs(buttons) do
             util.drawButton(button)
         end
+        util.alignedPrint("Tutorial Levels. Learn how the game works!",
+                          buttons[1].x * screenWidth,
+                          buttons[1].y * screenHeight - buttons[1].height, 0, 1, font)
+        util.alignedPrint("Play these levels after the tutorial",
+                          buttons[6].x * screenWidth,
+                          buttons[6].y * screenHeight - buttons[6].height, 0, 1, font)
     else
         game.drawGame()
         game.drawHud()
