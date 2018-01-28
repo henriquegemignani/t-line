@@ -52,9 +52,9 @@ function love.load()
         end
     end
 
-    smallFont = love.graphics.newFont("DejaVuSansMono.ttf", 15)
-    bigFont = love.graphics.newFont("DejaVuSansMono.ttf", 25)
-    font = love.graphics.setNewFont("DejaVuSansMono.ttf", 20)
+    smallFont = love.graphics.newFont(15)
+    bigFont = love.graphics.newFont(25)
+    font = love.graphics.setNewFont(20)
     images.cash = love.graphics.newImage("cash.png")
     images.factory = love.graphics.newImage("factory.png")
     images.house = love.graphics.newImage("house.png")
@@ -105,7 +105,6 @@ end
 
 function love.update(dt)
     require("lurker").update()
-    require("lovebird").update()
     updateArray(state.particles, dt, updateParticle)
     updateArray(state.textEffects, dt, updateTextEffect)
 end
