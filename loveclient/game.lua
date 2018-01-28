@@ -80,6 +80,16 @@ function game.hasUnsatisfiedRequirement(entity)
     return false
 end
 
+function game.priceMultiplierForConnectionType(connectionType)
+    if connectionType == "added" then
+        return 1
+    elseif connectionType == "removed" then
+        return constants.connectionRemovalModifier
+    else
+        return 0
+    end
+end
+
 function game.calculateProfit()
     local profit = 0
 
@@ -88,14 +98,11 @@ function game.calculateProfit()
         local originEntity = mapEntities[i]
         for j = i + 1, #mapEntities do
             local targetEntity = mapEntities[j]
-            local connectionType = state.connections[originEntity][targetEntity]
-
-            if connectionType == "added" then
-                profit = profit - game.priceBetweenEntities(originEntity, targetEntity)
-            elseif connectionType == "removed" then
-                profit = profit - game.priceBetweenEntities(originEntity, targetEntity)
-                                  * constants.connectionRemovalModifier
-            end
+            profit = profit -
+                game.priceBetweenEntities(originEntity, targetEntity)
+                * game.priceMultiplierForConnectionType(
+                    state.connections[originEntity][targetEntity]
+                )
         end
     end
 
@@ -216,7 +223,6 @@ function game.drawMapEntity(entity)
     util.alignedPrint(table.concat(texts, "\n"), 5, 0, 0, 0.5, font)
     -- util.alignedPrint(state.groupForEntity[entity].name, 0, 50, 0.5, 0, font)
 
-
     love.graphics.pop()
 end
 
@@ -257,6 +263,7 @@ function game.removeConnectionBetween(entityA, entityB)
     state.connections[entityA][entityB] = newState
     state.connections[entityB][entityA] = newState
     game.calculateReach()
+
     return price
 end
 
@@ -285,7 +292,6 @@ function game.drawGame()
             end
         end
     end
-    setColor(255, 255, 255, 255)
 
     local toDraw = {}
     for i, entity in ipairs(mapEntities) do
@@ -317,8 +323,9 @@ function game.drawGame()
         local entityX, entityY = game.entityImageCenter(state.currentlySelectedEntity)
         love.graphics.line(entityX, entityY, mouseX, mouseY)
 
-        util.alignedPrint(string.format("-%d $", game.priceBetweenPoints(mouseX, mouseY, entityX, entityY)),
-                     mouseX + 10, mouseY + 10, 0, 0)
+        util.alignedPrint(
+            string.format("-%d $", game.priceBetweenPoints(mouseX, mouseY, entityX, entityY)),
+            mouseX + 10, mouseY + 10, 0, 0)
     end
 
 
