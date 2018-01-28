@@ -45,13 +45,6 @@ end
 createButtons()
 
 function love.load()
-    require("lurker").postswap = genGlobals
-    require("lurker").preswap = function(name)
-        if name == "multiplayer.lua" or name == "multiplayer_thread.lua" then
-            return true
-        end
-    end
-
     smallFont = love.graphics.newFont(15)
     bigFont = love.graphics.newFont(25)
     font = love.graphics.setNewFont(20)
@@ -103,7 +96,6 @@ local function updateArray(array, dt, updateFunc)
 end
 
 function love.update(dt)
-    require("lurker").update()
     updateArray(state.particles, dt, updateParticle)
     updateArray(state.textEffects, dt, updateTextEffect)
 end
