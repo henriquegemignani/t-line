@@ -335,7 +335,11 @@ end
 
 function game.drawHud()
     -- Score
-    love.graphics.setColor(255, 255, 255, 255)
+    if state.currentMoney <= 0 then
+        love.graphics.setColor(255, 100, 100, 255)
+    else
+        love.graphics.setColor(255, 255, 255, 255)
+    end
     util.alignedPrint(string.format("Projected Profit: %.2f $", state.currentMoney),
                       centerX, 15, 0.5, 0.0,
                       bigFont)
